@@ -1,8 +1,12 @@
 package com.spring.security.jwt.securityConfig;
 
+import com.spring.security.jwt.repo.UserRepo;
+import com.spring.security.jwt.securityConfig.jwt.JwtAuthenticationFilter;
+import com.spring.security.jwt.securityConfig.jwt.JwtAuthorizationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +21,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     private UserPrincipalDetailsService userPrincipalDetailsService;
+    private UserRepo userRepo;
 
     @Autowired
     public SecurityConfiguration(UserPrincipalDetailsService userPrincipalDetailsService) {
@@ -47,24 +52,28 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
+                .csrf().disable()
+                .addFilter(new JwtAuthenticationFilter(authenticationManager()))
+                .addFilter(new JwtAuthorizationFilter(authenticationManager(), this.userRepo))
                 .authorizeRequests()
+                .antMatchers(HttpMethod.POST,"/login").permitAll()
                 .antMatchers("/api/v1/main").permitAll()
                 .antMatchers("/api/v1/profile").authenticated()
                 .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .antMatchers("/api/v1/basic/allbasic").hasAuthority("ACCESS_BASIC_ALL")
                 .antMatchers("/api/v1/basic/mybasic").hasAuthority("ACCESS_BASIC_MY")
                 .antMatchers("/api/v1/management").hasAnyRole("ADMIN","MANAGER")
-//                .anyRequest().authenticated()
-                .and()
-                .formLogin()
-                .loginPage("/api/v1/login")
-                .loginProcessingUrl("/signin")
-                .usernameParameter("user")
-                .passwordParameter("pass")
-                .and()
-                .logout()
-                .logoutRequestMatcher(new AntPathRequestMatcher("/logout")).logoutSuccessUrl("/api/v1/main");
-//                .httpBasic();
+                .anyRequest().authenticated();
+//                .and()
+//                .formLogin()
+//                .loginPage("/api/v1/login")
+//                .loginProcessingUrl("/signin")
+//                .usernameParameter("user")
+//                .passwordParameter("pass")
+//                .and()
+//                .logout()
+//                .logoutRequestMatcher(new AntPathRequestMatcher("/logout")).logoutSuccessUrl("/api/v1/main");
+////                .httpBasic();
     }
 
     @Bean
